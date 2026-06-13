@@ -290,6 +290,13 @@ class HoloCureEditor(ctk.CTk):
             entry.insert(0, num_to_str(self.model.get_number(key)))
             entry.grid(row=row, column=1, sticky="w", pady=4)
             self._number_entries[key] = entry
+            if key == "holoCoins":
+                worker = self.model.worker_coins()
+                if worker > 0:
+                    ctk.CTkLabel(
+                        scroll, text=f"(+{worker:,} Coins from workers)",
+                        anchor="w", text_color="gray",
+                    ).grid(row=row, column=2, sticky="w", padx=(12, 6), pady=4)
             row += 1
         if row == 0:
             ctk.CTkLabel(scroll, text="No matching fields in this save.").grid(row=0, column=0)
@@ -402,9 +409,11 @@ class HoloCureEditor(ctk.CTk):
             is_on=self.model.achievement_unlocked,
             label_fn=game_data.prettify,
             store=self._achievement_vars,
+            searchable=True,
         )
 
-    def _build_checklist(self, parent, options, is_on, label_fn, store: dict) -> None:
+    def _build_checklist(self, parent, options, is_on, label_fn, store: dict,
+                         searchable: bool = False) -> None:
         controls = ctk.CTkFrame(parent)
         controls.pack(fill="x", padx=4, pady=(4, 0))
 
@@ -421,12 +430,33 @@ class HoloCureEditor(ctk.CTk):
         scroll = ctk.CTkScrollableFrame(parent)
         scroll.pack(fill="both", expand=True, padx=4, pady=4)
         cols = 3
-        for idx, ident in enumerate(options):
+
+        boxes: list[tuple[str, str, ctk.CTkCheckBox]] = []  # (ident, lowered label, widget)
+        for ident in options:
             var = ctk.BooleanVar(value=bool(is_on(ident)))
             store[ident] = var
-            ctk.CTkCheckBox(scroll, text=label_fn(ident), variable=var).grid(
-                row=idx // cols, column=idx % cols, sticky="w", padx=8, pady=3
-            )
+            label = label_fn(ident)
+            cb = ctk.CTkCheckBox(scroll, text=label, variable=var)
+            boxes.append((ident, f"{label} {ident}".lower(), cb))
+
+        def reflow(query: str = "") -> None:
+            q = query.strip().lower()
+            shown = 0
+            for ident, hay, cb in boxes:
+                if q and q not in hay:
+                    cb.grid_forget()
+                    continue
+                cb.grid(row=shown // cols, column=shown % cols, sticky="w", padx=8, pady=3)
+                shown += 1
+
+        if searchable:
+            search_var = ctk.StringVar()
+            search_var.trace_add("write", lambda *_: reflow(search_var.get()))
+            ctk.CTkEntry(controls, textvariable=search_var, width=220,
+                         placeholder_text="Search achievements…").pack(
+                side="right", padx=6, pady=4)
+
+        reflow()
 
     # --- apply (read widgets back into the model) ----------------------------
     def _parse_number(self, raw: str, label: str) -> float:

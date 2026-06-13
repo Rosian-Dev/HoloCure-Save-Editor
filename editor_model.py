@@ -43,6 +43,22 @@ class EditorModel:
         else:
             self.data[key] = coerce_like(self.data[key], value)
 
+    def worker_coins(self) -> int:
+        """Coins currently stored by Holo House workers (collectable).
+
+        Each entry in ``manageWorkers`` is a flat array; index 13 is the worker's
+        stored/collectable coins (it drops to 0 right after collecting, while the
+        lifetime total at index 14 keeps growing). The game credits these on top
+        of ``holoCoins`` when you collect, which is why the in-game total can sit
+        above the saved ``holoCoins`` value.
+        """
+        total = 0.0
+        for w in self.data.get("manageWorkers", []):
+            if (isinstance(w, list) and len(w) > 13
+                    and isinstance(w[13], (int, float)) and not isinstance(w[13], bool)):
+                total += w[13]
+        return int(total)
+
     # --- paired [id, value] arrays (characters/fandomEXP/characterClears) ----
     @staticmethod
     def _pair_get(pairs: list, ident: str, default=0.0):
