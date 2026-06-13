@@ -1,0 +1,16 @@
+# Runtime backups created by the editor
+backups/
+
+# Runtime, append-only id cache (regenerated from saves)
+id_cache.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
